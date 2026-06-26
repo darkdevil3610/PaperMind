@@ -19,6 +19,7 @@ from agents.report_agent import generate_final_report
 from agents.research_mentor_agent import run_research_mentor_agent
 from agents.safety_agent import run_safety_agent
 from agents.summary_agent import run_summary_agent
+from utils.gemini_client import get_gemini_client
 from utils.pdf_reader import extract_pages_from_pdf, get_pdf_stats
 from utils.rag_store import (
     chroma_available,
@@ -647,7 +648,25 @@ with st.sidebar:
     use_ai_citations = st.toggle("Generate AI citations on upload", value=False)
     show_raw_text = st.toggle("Show extracted text preview", value=False)
     st.divider()
-    st.caption("Requires `GEMINI_API_KEY` in `.env` for AI analysis, embeddings, and citations.")
+    if "api_key_override" not in st.session_state:
+        st.session_state.api_key_override = ""
+    api_key_input = st.text_input(
+        "Gemini API Key",
+        type="password",
+        value=st.session_state.api_key_override,
+        placeholder="Paste your Gemini API key here (skips .env)",
+        help="Optional if set in .env. Overrides .env for this session.",
+    )
+    if api_key_input != st.session_state.api_key_override:
+        if api_key_input:
+            os.environ["GEMINI_API_KEY"] = api_key_input
+            st.session_state.api_key_override = api_key_input
+        else:
+            os.environ.pop("GEMINI_API_KEY", None)
+            st.session_state.api_key_override = ""
+        get_gemini_client.cache_clear()
+        st.rerun()
+    st.caption("Requires `GEMINI_API_KEY` in `.env` for AI analysis, embeddings, and citations. You can also paste it above.")
 
 st.markdown(
     """
